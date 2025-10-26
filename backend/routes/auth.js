@@ -1,134 +1,72 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import sendEmail from '../utils/sendEmail.js';
 import generateToken from '../utils/generateToken.js';
-import { protect } from '../middleware/auth.js';
+import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
-// @route   POST /api/auth/register
-// @desc    Register a new user
-// @access  Public
+// Register User
 router.post('/register', [
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['student', 'teacher']).withMessage('Invalid role')
+  body('name').notEmpty(),
+  body('email').isEmail(),
+  body('password').isLength({ min: 6 }),
+  body('role').isIn(['student', 'teacher'])
 ], async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { name, email, password, role } = req.body;
 
   try {
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'User already exists' });
 
-    // Create user
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
     const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      isApproved: role === 'student' ? true : false // Teachers need approval
+      name, email, password, role,
+      isApproved: role === 'student',
+      verificationCode: code
     });
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved,
-        token: generateToken(user._id)
-      });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    await sendEmail(email, 'Verify your email', `Your verification code is ${code}`);
+
+    res.status(201).json({
+      message: 'Verification code sent to your email. Please verify to complete registration.',
+      userId: user._id
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// @route   POST /api/auth/login
-// @desc    Authenticate user
-// @access  Public
-router.post('/login', [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').notEmpty().withMessage('Password is required')
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { email, password } = req.body;
+// Verify code
+router.post('/verify', async (req, res) => {
+  const { userId, code } = req.body;
 
   try {
-    // Find user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findById(userId);
+    if (!user) return res.status(400).json({ message: 'User not found' });
 
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        photo: user.photo,
-        bio: user.bio,
-        isApproved: user.isApproved,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+    if (user.isVerified) return res.json({ message: 'Already verified' });
 
-// @route   GET /api/auth/profile
-// @desc    Get user profile
-// @access  Private
-router.get('/profile', protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// @route   PUT /api/auth/profile
-// @desc    Update user profile
-// @access  Private
-router.put('/profile', protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-
-    if (user) {
-      user.name = req.body.name || user.name;
-      user.bio = req.body.bio || user.bio;
-      user.photo = req.body.photo || user.photo;
-
-      const updatedUser = await user.save();
+    if (user.verificationCode === code) {
+      user.isVerified = true;
+      user.verificationCode = undefined;
+      await user.save();
 
       res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        photo: updatedUser.photo,
-        bio: updatedUser.bio
+        message: 'Email verified successfully!',
+        token: generateToken(user._id),
+        user
       });
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(400).json({ message: 'Invalid code' });
     }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

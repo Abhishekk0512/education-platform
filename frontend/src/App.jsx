@@ -15,6 +15,7 @@ import CourseDetails from './pages/CourseDetails';
 import CreateCourse from './pages/CreateCourse';
 import Profile from './pages/Profile';
 import HomePage from './pages/HomePage';
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   const { loading } = useAuth();
@@ -43,6 +44,7 @@ function App() {
             {/* <Route path="/" element={<Home />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path='/verify-email' element={<VerifyEmail/>}/>
             <Route path="/courses/:id" element={<CourseDetails />} />
             
             {/* Student Routes */}

@@ -38,7 +38,7 @@ const Register = () => {
     try {
       const { confirmPassword, ...registrationData } = formData;
       const response = await authAPI.register(registrationData);
-      login(response.data);
+      navigate('/verify-email', { state: { userId: response.data.userId } });
       
       // Redirect based on role
       if (response.data.role === 'student') {
