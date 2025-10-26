@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { courseAPI, enrollmentAPI } from '../services/api';
-import { BookOpen, Users, CheckCircle, Clock, Plus, Edit, Trash2 } from 'lucide-react';
+import { courseAPI } from '../services/api';
+import { BookOpen, Users, CheckCircle, Clock, Plus, Edit, Trash2, Eye } from 'lucide-react';
 
 const TeacherDashboard = () => {
   const [courses, setCourses] = useState([]);
@@ -53,6 +53,10 @@ const TeacherDashboard = () => {
       console.error('Error deleting course:', error);
       alert('Failed to delete course');
     }
+  };
+
+  const handleViewCourse = (courseId) => {
+    window.location.href = `/courses/${courseId}`;
   };
 
   if (loading) {
@@ -132,11 +136,15 @@ const TeacherDashboard = () => {
                     <img
                       src={course.thumbnail}
                       alt={course.title}
-                      className="w-24 h-24 object-cover rounded-lg"
+                      className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => handleViewCourse(course._id)}
                     />
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 
+                          className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleViewCourse(course._id)}
+                        >
                           {course.title}
                         </h3>
                         {course.isApproved ? (
@@ -159,15 +167,22 @@ const TeacherDashboard = () => {
                         </span>
                         <span className="flex items-center space-x-1">
                           <BookOpen className="h-4 w-4" />
-                          <span>{course.lessons?.length || 0} lessons</span>
+                          <span>{course.sections?.reduce((total, s) => total + s.lectures.length, 0) || 0} lectures</span>
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => handleViewCourse(course._id)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="View Course"
+                    >
+                      <Eye className="h-5 w-5" />
+                    </button>
                     <Link
                       to={`/teacher/edit-course/${course._id}`}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title="Edit Course"
                     >
                       <Edit className="h-5 w-5" />
