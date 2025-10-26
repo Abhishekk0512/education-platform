@@ -26,6 +26,8 @@ api.interceptors.request.use(
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
+  verifyEmail: (data) => api.post('/auth/verify-email', data),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
   login: (data) => api.post('/auth/login', data),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data)
@@ -82,7 +84,7 @@ export const uploadAPI = {
   uploadPDF: async (file, onUploadProgress) => {
     const formData = new FormData();
     formData.append('pdf', file);
-    
+
     return api.post('/upload/pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -90,11 +92,11 @@ export const uploadAPI = {
       onUploadProgress
     });
   },
-  
+
   uploadVideo: async (file, onUploadProgress) => {
     const formData = new FormData();
     formData.append('video', file);
-    
+
     return api.post('/upload/video', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -102,11 +104,11 @@ export const uploadAPI = {
       onUploadProgress
     });
   },
-  
+
   uploadThumbnail: async (file, onUploadProgress) => {
     const formData = new FormData();
     formData.append('thumbnail', file);
-    
+
     return api.post('/upload/thumbnail', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -118,7 +120,7 @@ export const uploadAPI = {
   uploadProfilePhoto: async (file, onUploadProgress) => {
     const formData = new FormData();
     formData.append('photo', file);
-    
+
     return api.post('/upload/profile-photo', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
