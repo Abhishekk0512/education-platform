@@ -9,6 +9,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Test configuration
+console.log('Cloudinary configured:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✓' : '✗',
+  api_key: process.env.CLOUDINARY_API_KEY ? '✓' : '✗',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✓' : '✗'
+});
+
 // Storage for PDFs
 const pdfStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -26,7 +33,7 @@ const videoStorage = new CloudinaryStorage({
   params: {
     folder: 'education-platform/videos',
     resource_type: 'video',
-    allowed_formats: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'],
+    allowed_formats: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
     public_id: (req, file) => `video_${Date.now()}`
   }
 });
