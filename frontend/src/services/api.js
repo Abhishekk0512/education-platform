@@ -102,6 +102,18 @@ export const uploadAPI = {
       },
       onUploadProgress
     });
+  },
+
+  uploadProfilePhoto: async (file, onUploadProgress) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    
+    return api.post('/upload/profile-photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
   }
 };
 
