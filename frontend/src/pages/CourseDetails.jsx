@@ -107,27 +107,43 @@ const CourseDetails = () => {
       let completedLectures;
 
       if (isCompleted) {
+        // Remove from completed
         completedLectures = enrollment.completedLectures.filter(
           cl => !(cl.sectionIndex === sectionIndex && cl.lectureIndex === lectureIndex)
         );
       } else {
+        // Add to completed
         completedLectures = [
           ...enrollment.completedLectures,
           { sectionIndex, lectureIndex }
         ];
       }
 
+      // Calculate total lectures
       const totalLectures = course.sections.reduce((total, s) => total + s.lectures.length, 0);
-      const progress = Math.round((completedLectures.length / totalLectures) * 100);
+      
+      // Calculate progress percentage
+      const progress = totalLectures > 0 
+        ? Math.round((completedLectures.length / totalLectures) * 100)
+        : 0;
 
+      console.log('Updating progress:', {
+        completedLectures: completedLectures.length,
+        totalLectures,
+        progress
+      });
+
+      // Update on backend
       await enrollmentAPI.updateProgress(enrollment._id, {
         completedLectures,
         progress,
       });
 
-      checkEnrollment();
+      // Refresh enrollment data
+      await checkEnrollment();
     } catch (error) {
       console.error('Error updating progress:', error);
+      alert('Failed to update progress. Please try again.');
     }
   };
 
@@ -321,7 +337,7 @@ const CourseDetails = () => {
                         <span className="flex-1 text-sm font-medium text-gray-900">{pdf.title}</span>
                         <div className="flex items-center space-x-2">
                           <a
-                            href={pdf.url}
+                            href={`https://docs.google.com/viewer?url=${encodeURIComponent(pdf.url)}&embedded=true`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary hover:underline text-sm"
@@ -332,6 +348,8 @@ const CourseDetails = () => {
                           <a
                             href={pdf.url}
                             download={pdf.title}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="flex items-center space-x-1 text-primary hover:underline text-sm"
                           >
                             <Download className="h-4 w-4" />

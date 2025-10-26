@@ -21,12 +21,14 @@ router.post('/pdf', protect, authorizeRoles('teacher'), uploadPDF.single('pdf'),
 
     console.log('Uploading PDF to Cloudinary...');
     
-    // Upload to Cloudinary
+    // Upload to Cloudinary with proper PDF flags
     const result = await uploadToCloudinary(req.file.buffer, {
       folder: 'education-platform/pdfs',
       resource_type: 'raw',
       public_id: `pdf_${Date.now()}`,
-      format: 'pdf'
+      format: 'pdf',
+      type: 'upload',
+      access_mode: 'public'
     });
 
     console.log('PDF uploaded successfully:', result.secure_url);

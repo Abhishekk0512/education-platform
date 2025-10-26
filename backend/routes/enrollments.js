@@ -63,7 +63,7 @@ router.get('/my-courses', protect, authorizeRoles('student'), async (req, res) =
 // @access  Private/Student
 router.put('/:id/progress', protect, authorizeRoles('student'), async (req, res) => {
   try {
-    const { completedLessons, progress } = req.body;
+    const { completedLectures, progress } = req.body;
 
     const enrollment = await Enrollment.findOne({
       _id: req.params.id,
@@ -74,17 +74,34 @@ router.put('/:id/progress', protect, authorizeRoles('student'), async (req, res)
       return res.status(404).json({ message: 'Enrollment not found' });
     }
 
-    enrollment.completedLessons = completedLessons;
+    // Update completed lectures
+    enrollment.completedLectures = completedLectures;
     enrollment.progress = progress;
 
-    if (progress === 100 && !enrollment.completedAt) {
+    // If progress is 100% and not completed yet, mark as completed
+    if (progress >= 100 && !enrollment.completedAt) {
       enrollment.completedAt = new Date();
       enrollment.certificateIssued = true;
     }
 
+    // If progress drops below 100%, remove completion
+    if (progress < 100 && enrollment.completedAt) {
+      enrollment.completedAt = undefined;
+      enrollment.certificateIssued = false;
+    }
+
     await enrollment.save();
-    res.json(enrollment);
+    
+    // Return populated enrollment
+    const updatedEnrollment = await Enrollment.findById(enrollment._id)
+      .populate({
+        path: 'course',
+        populate: { path: 'instructor', select: 'name email photo' }
+      });
+
+    res.json(updatedEnrollment);
   } catch (error) {
+    console.error('Error updating progress:', error);
     res.status(500).json({ message: error.message });
   }
 });
