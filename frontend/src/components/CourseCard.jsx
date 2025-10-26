@@ -51,5 +51,4 @@ const CourseCard = ({ course }) => {
     </Link>
   );
 };
-
 export default CourseCard;
