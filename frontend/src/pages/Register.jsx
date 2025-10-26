@@ -5,7 +5,7 @@ import { authAPI } from '../services/api';
 import { AlertCircle, CheckCircle, Mail } from 'lucide-react';
 
 const Register = () => {
-  const [step, setStep] = useState(1); // 1: Registration, 2: Verification
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,12 +41,41 @@ const Register = () => {
 
     try {
       const { confirmPassword, ...registrationData } = formData;
+      
+      // DEBUG: Log what we're sending
+      console.log('📤 Sending registration data:', registrationData);
+      
       const response = await authAPI.register(registrationData);
       
+      // DEBUG: Log response
+      console.log('✅ Registration response:', response.data);
+      
       setSuccess(response.data.message);
-      setStep(2); // Move to verification step
+      setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      // DEBUG: Log full error details
+      console.error('❌ Registration error:', err);
+      console.error('📋 Error response:', err.response);
+      console.error('📋 Error data:', err.response?.data);
+      
+      // Handle different error formats
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          // Single error message
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.errors) {
+          // Array of validation errors
+          errorMessage = err.response.data.errors
+            .map(e => e.msg || e.message)
+            .join(', ');
+        } else if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,10 +87,14 @@ const Register = () => {
     setLoading(true);
 
     try {
+      console.log('📤 Verifying email:', { email: formData.email, code: verificationCode });
+      
       const response = await authAPI.verifyEmail({
         email: formData.email,
         code: verificationCode
       });
+      
+      console.log('✅ Verification response:', response.data);
       
       login(response.data);
       setSuccess('Email verified successfully! Redirecting...');
@@ -74,6 +107,9 @@ const Register = () => {
         }
       }, 1500);
     } catch (err) {
+      console.error('❌ Verification error:', err);
+      console.error('📋 Error response:', err.response?.data);
+      
       setError(err.response?.data?.message || 'Invalid verification code. Please try again.');
     } finally {
       setLoading(false);
@@ -86,9 +122,16 @@ const Register = () => {
     setLoading(true);
 
     try {
+      console.log('📤 Resending verification code to:', formData.email);
+      
       const response = await authAPI.resendVerification(formData.email);
+      
+      console.log('✅ Resend response:', response.data);
+      
       setSuccess(response.data.message);
     } catch (err) {
+      console.error('❌ Resend error:', err);
+      
       setError(err.response?.data?.message || 'Failed to resend code. Please try again.');
     } finally {
       setLoading(false);
@@ -107,15 +150,15 @@ const Register = () => {
 
               {error && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-800">
-                  <AlertCircle className="h-5 w-5" />
-                  <span>{error}</span>
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
 
               {success && (
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2 text-green-800">
-                  <CheckCircle className="h-5 w-5" />
-                  <span>{success}</span>
+                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{success}</span>
                 </div>
               )}
 
@@ -234,15 +277,15 @@ const Register = () => {
 
               {error && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-800">
-                  <AlertCircle className="h-5 w-5" />
-                  <span>{error}</span>
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
 
               {success && (
                 <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2 text-green-800">
-                  <CheckCircle className="h-5 w-5" />
-                  <span>{success}</span>
+                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{success}</span>
                 </div>
               )}
 
