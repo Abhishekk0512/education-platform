@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { courseAPI } from '../services/api';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { courseAPI, uploadAPI } from '../services/api';
+import { Plus, Trash2, AlertCircle, Upload, X, FileText, Video } from 'lucide-react';
 
 const CreateCourse = () => {
   const { id } = useParams();
@@ -21,6 +21,7 @@ const CreateCourse = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState({});
 
   const categories = ['AI', 'Data Science', 'Web Development', 'Mobile Development', 'Cybersecurity', 'Cloud Computing', 'Other'];
   const difficulties = ['Beginner', 'Intermediate', 'Advanced'];
@@ -54,6 +55,98 @@ const CreateCourse = () => {
     setFormData({ ...formData, lessons: updatedLessons });
   };
 
+  // Handle thumbnail upload
+  const handleThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    try {
+      setUploadProgress({ thumbnail: 0 });
+      const response = await uploadAPI.uploadThumbnail(file, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress({ thumbnail: progress });
+      });
+
+      setFormData({ ...formData, thumbnail: response.data.url });
+      setUploadProgress({});
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error);
+      setError('Failed to upload thumbnail');
+      setUploadProgress({});
+    }
+  };
+
+  // Handle PDF upload for lesson
+  const handlePDFUpload = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Please upload a PDF file');
+      return;
+    }
+
+    try {
+      const progressKey = `pdf_${index}`;
+      setUploadProgress({ ...uploadProgress, [progressKey]: 0 });
+
+      const response = await uploadAPI.uploadPDF(file, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress({ ...uploadProgress, [progressKey]: progress });
+      });
+
+      handleLessonChange(index, 'pdfUrl', response.data.url);
+      
+      const newProgress = { ...uploadProgress };
+      delete newProgress[progressKey];
+      setUploadProgress(newProgress);
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      setError('Failed to upload PDF');
+      const newProgress = { ...uploadProgress };
+      delete newProgress[`pdf_${index}`];
+      setUploadProgress(newProgress);
+    }
+  };
+
+  // Handle video upload for lesson
+  const handleVideoUpload = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      setError('Please upload a video file');
+      return;
+    }
+
+    try {
+      const progressKey = `video_${index}`;
+      setUploadProgress({ ...uploadProgress, [progressKey]: 0 });
+
+      const response = await uploadAPI.uploadVideo(file, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress({ ...uploadProgress, [progressKey]: progress });
+      });
+
+      handleLessonChange(index, 'videoUrl', response.data.url);
+      
+      const newProgress = { ...uploadProgress };
+      delete newProgress[progressKey];
+      setUploadProgress(newProgress);
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      setError('Failed to upload video');
+      const newProgress = { ...uploadProgress };
+      delete newProgress[`video_${index}`];
+      setUploadProgress(newProgress);
+    }
+  };
+
   const addLesson = () => {
     setFormData({
       ...formData,
@@ -72,7 +165,6 @@ const CreateCourse = () => {
 
   const removeLesson = (index) => {
     const updatedLessons = formData.lessons.filter((_, i) => i !== index);
-    // Update order numbers
     updatedLessons.forEach((lesson, i) => {
       lesson.order = i + 1;
     });
@@ -117,6 +209,9 @@ const CreateCourse = () => {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-800">
           <AlertCircle className="h-5 w-5" />
           <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-auto">
+            <X className="h-5 w-5" />
+          </button>
         </div>
       )}
 
@@ -212,22 +307,60 @@ const CreateCourse = () => {
               </div>
             </div>
 
+            {/* Thumbnail Upload */}
             <div>
-              <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">
-                Thumbnail URL
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Course Thumbnail
               </label>
-              <input
-                type="url"
-                id="thumbnail"
-                name="thumbnail"
-                value={formData.thumbnail}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="https://example.com/image.jpg"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Provide a URL to a course thumbnail image (optional)
-              </p>
+              
+              {formData.thumbnail ? (
+                <div className="relative">
+                  <img 
+                    src={formData.thumbnail} 
+                    alt="Thumbnail preview" 
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, thumbnail: '' })}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-2">
+                    <label htmlFor="thumbnail-upload" className="cursor-pointer">
+                      <span className="text-primary hover:underline">Upload a thumbnail</span>
+                      <input
+                        id="thumbnail-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleThumbnailUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                </div>
+              )}
+              
+              {uploadProgress.thumbnail !== undefined && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress.thumbnail}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${uploadProgress.thumbnail}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -320,30 +453,116 @@ const CreateCourse = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Video Upload */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Video URL
+                          Lesson Video
                         </label>
-                        <input
-                          type="url"
-                          value={lesson.videoUrl}
-                          onChange={(e) => handleLessonChange(index, 'videoUrl', e.target.value)}
-                          className="input-field"
-                          placeholder="https://youtube.com/..."
-                        />
+                        {lesson.videoUrl ? (
+                          <div className="relative">
+                            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <Video className="h-5 w-5 text-green-600 mr-2" />
+                              <span className="text-sm text-green-800 flex-1 truncate">
+                                Video uploaded
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleLessonChange(index, 'videoUrl', '')}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <label htmlFor={`video-${index}`} className="cursor-pointer">
+                              <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                              <span className="mt-2 block text-sm text-primary hover:underline">
+                                Upload Video
+                              </span>
+                              <input
+                                id={`video-${index}`}
+                                type="file"
+                                accept="video/*"
+                                onChange={(e) => handleVideoUpload(index, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">MP4, AVI, MOV up to 100MB</p>
+                          </div>
+                        )}
+                        
+                        {uploadProgress[`video_${index}`] !== undefined && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-sm text-gray-600 mb-1">
+                              <span>Uploading...</span>
+                              <span>{uploadProgress[`video_${index}`]}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{ width: `${uploadProgress[`video_${index}`]}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
+                      {/* PDF Upload */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          PDF URL
+                          Lesson PDF
                         </label>
-                        <input
-                          type="url"
-                          value={lesson.pdfUrl}
-                          onChange={(e) => handleLessonChange(index, 'pdfUrl', e.target.value)}
-                          className="input-field"
-                          placeholder="https://example.com/material.pdf"
-                        />
+                        {lesson.pdfUrl ? (
+                          <div className="relative">
+                            <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <FileText className="h-5 w-5 text-blue-600 mr-2" />
+                              <span className="text-sm text-blue-800 flex-1 truncate">
+                                PDF uploaded
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleLessonChange(index, 'pdfUrl', '')}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <label htmlFor={`pdf-${index}`} className="cursor-pointer">
+                              <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                              <span className="mt-2 block text-sm text-primary hover:underline">
+                                Upload PDF
+                              </span>
+                              <input
+                                id={`pdf-${index}`}
+                                type="file"
+                                accept="application/pdf"
+                                onChange={(e) => handlePDFUpload(index, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">PDF up to 10MB</p>
+                          </div>
+                        )}
+                        
+                        {uploadProgress[`pdf_${index}`] !== undefined && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-sm text-gray-600 mb-1">
+                              <span>Uploading...</span>
+                              <span>{uploadProgress[`pdf_${index}`]}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{ width: `${uploadProgress[`pdf_${index}`]}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -364,11 +583,13 @@ const CreateCourse = () => {
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Object.keys(uploadProgress).length > 0}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading 
               ? 'Saving...' 
+              : Object.keys(uploadProgress).length > 0
+              ? 'Uploading files...'
               : isEditMode 
               ? 'Update Course' 
               : 'Create Course'}

@@ -10,6 +10,8 @@ import {
   PlayCircle,
   FileText,
   CheckCircle,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 const CourseDetails = () => {
@@ -21,6 +23,7 @@ const CourseDetails = () => {
   const [enrollment, setEnrollment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -246,10 +249,52 @@ const CourseDetails = () => {
           {/* Syllabus */}
           <div className="card">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Syllabus</h2>
-            <div className="prose prose-sm max-w-none text-gray-700">
+            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
               {course.syllabus}
             </div>
           </div>
+
+          {/* Video Player Modal */}
+          {selectedLesson && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    Lesson {selectedLesson.order}: {selectedLesson.title}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedLesson(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <span className="text-2xl">&times;</span>
+                  </button>
+                </div>
+                <div className="p-4">
+                  {selectedLesson.videoUrl && (
+                    <video
+                      controls
+                      className="w-full rounded-lg mb-4"
+                      src={selectedLesson.videoUrl}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                  <p className="text-gray-700 mb-4">{selectedLesson.content}</p>
+                  {selectedLesson.pdfUrl && (
+                    <a
+                      href={selectedLesson.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary inline-flex items-center space-x-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download PDF Materials</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Lessons */}
           {enrollment && course.lessons && course.lessons.length > 0 && (
@@ -278,17 +323,15 @@ const CourseDetails = () => {
                           <p className="text-sm text-gray-600 mb-3">
                             {lesson.content}
                           </p>
-                          <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-4 flex-wrap gap-2">
                             {lesson.videoUrl && (
-                              <a
-                                href={lesson.videoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => setSelectedLesson(lesson)}
                                 className="flex items-center space-x-1 text-sm text-primary hover:underline"
                               >
                                 <PlayCircle className="h-4 w-4" />
                                 <span>Watch Video</span>
-                              </a>
+                              </button>
                             )}
                             {lesson.pdfUrl && (
                               <a
@@ -298,6 +341,16 @@ const CourseDetails = () => {
                                 className="flex items-center space-x-1 text-sm text-primary hover:underline"
                               >
                                 <FileText className="h-4 w-4" />
+                                <span>View PDF</span>
+                              </a>
+                            )}
+                            {lesson.pdfUrl && (
+                              <a
+                                href={lesson.pdfUrl}
+                                download
+                                className="flex items-center space-x-1 text-sm text-green-600 hover:underline"
+                              >
+                                <Download className="h-4 w-4" />
                                 <span>Download PDF</span>
                               </a>
                             )}

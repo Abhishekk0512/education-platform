@@ -66,4 +66,43 @@ export const quizAPI = {
   submitQuiz: (id, answers) => api.post(`/quiz/${id}/submit`, { answers })
 };
 
+// Upload API
+export const uploadAPI = {
+  uploadPDF: async (file, onUploadProgress) => {
+    const formData = new FormData();
+    formData.append('pdf', file);
+    
+    return api.post('/upload/pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
+  },
+  
+  uploadVideo: async (file, onUploadProgress) => {
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    return api.post('/upload/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
+  },
+  
+  uploadThumbnail: async (file, onUploadProgress) => {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+    
+    return api.post('/upload/thumbnail', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
+  }
+};
+
 export default api;
