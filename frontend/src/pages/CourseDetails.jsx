@@ -316,17 +316,29 @@ const CourseDetails = () => {
                   <h4 className="font-semibold text-gray-900 mb-2">Course Materials:</h4>
                   <div className="space-y-2">
                     {selectedLecture.pdfUrls.map((pdf, index) => (
-                      <a
-                        key={index}
-                        href={pdf.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200"
-                      >
+                      <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <FileText className="h-5 w-5 text-blue-600" />
                         <span className="flex-1 text-sm font-medium text-gray-900">{pdf.title}</span>
-                        <Download className="h-4 w-4 text-gray-600" />
-                      </a>
+                        <div className="flex items-center space-x-2">
+                          <a
+                            href={pdf.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm"
+                          >
+                            View
+                          </a>
+                          <span className="text-gray-300">|</span>
+                          <a
+                            href={pdf.url}
+                            download={pdf.title}
+                            className="flex items-center space-x-1 text-primary hover:underline text-sm"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
