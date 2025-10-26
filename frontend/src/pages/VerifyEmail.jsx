@@ -20,6 +20,12 @@ const VerifyEmail = () => {
 
     try {
       const res = await authAPI.verifyEmail({ userId, code });
+      login(response.data); // store token & user
+if (response.data.user.role === 'student') {
+  navigate('/student/dashboard');
+} else if (response.data.user.role === 'teacher') {
+  navigate('/teacher/dashboard');
+}
       setMessage(res.data.message);
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
