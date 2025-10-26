@@ -13,7 +13,8 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
-  Lock
+  Lock,
+  Shield
 } from 'lucide-react';
 
 const CourseDetails = () => {
@@ -27,6 +28,9 @@ const CourseDetails = () => {
   const [enrolling, setEnrolling] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [expandedSections, setExpandedSections] = useState({});
+
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,39 +111,26 @@ const CourseDetails = () => {
       let completedLectures;
 
       if (isCompleted) {
-        // Remove from completed
         completedLectures = enrollment.completedLectures.filter(
           cl => !(cl.sectionIndex === sectionIndex && cl.lectureIndex === lectureIndex)
         );
       } else {
-        // Add to completed
         completedLectures = [
           ...enrollment.completedLectures,
           { sectionIndex, lectureIndex }
         ];
       }
 
-      // Calculate total lectures
       const totalLectures = course.sections.reduce((total, s) => total + s.lectures.length, 0);
-      
-      // Calculate progress percentage
       const progress = totalLectures > 0 
         ? Math.round((completedLectures.length / totalLectures) * 100)
         : 0;
 
-      console.log('Updating progress:', {
-        completedLectures: completedLectures.length,
-        totalLectures,
-        progress
-      });
-
-      // Update on backend
       await enrollmentAPI.updateProgress(enrollment._id, {
         completedLectures,
         progress,
       });
 
-      // Refresh enrollment data
       await checkEnrollment();
     } catch (error) {
       console.error('Error updating progress:', error);
@@ -148,7 +139,12 @@ const CourseDetails = () => {
   };
 
   const canAccessLecture = (lecture) => {
-    return enrollment || lecture.isPreview;
+    // Admins can access all lectures
+    if (isAdmin) return true;
+    // Enrolled students can access all lectures
+    if (enrollment) return true;
+    // Non-enrolled users can only access preview lectures
+    return lecture.isPreview;
   };
 
   if (loading) {
@@ -176,6 +172,16 @@ const CourseDetails = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Admin Badge */}
+      {isAdmin && (
+        <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center space-x-2">
+          <Shield className="h-5 w-5 text-purple-600" />
+          <span className="text-purple-800 font-medium">
+            Viewing as Administrator - Full access to all content
+          </span>
+        </div>
+      )}
+
       {/* Course Header */}
       <div className="card mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -187,6 +193,11 @@ const CourseDetails = () => {
               <span className="px-3 py-1 text-sm font-semibold text-gray-700 bg-gray-100 rounded">
                 {course.difficulty}
               </span>
+              {!course.isApproved && (
+                <span className="px-3 py-1 text-sm font-semibold text-amber-700 bg-amber-100 rounded">
+                  Pending Approval
+                </span>
+              )}
             </div>
 
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -239,7 +250,17 @@ const CourseDetails = () => {
               className="w-full h-64 object-cover rounded-lg mb-4"
             />
 
-            {enrollment ? (
+            {isAdmin ? (
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center space-x-2 text-purple-800 mb-2">
+                  <Shield className="h-5 w-5" />
+                  <span className="font-semibold">Admin Preview Mode</span>
+                </div>
+                <p className="text-sm text-purple-700">
+                  You have full access to review all course content for approval purposes.
+                </p>
+              </div>
+            ) : enrollment ? (
               <div className="space-y-4">
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-green-800 font-semibold mb-2">
@@ -429,6 +450,11 @@ const CourseDetails = () => {
                                         Preview
                                       </span>
                                     )}
+                                    {isAdmin && (
+                                      <span className="px-2 py-1 text-xs font-semibold text-purple-600 bg-purple-50 rounded">
+                                        Admin Access
+                                      </span>
+                                    )}
                                   </div>
                                   
                                   {lecture.description && (
@@ -457,7 +483,7 @@ const CourseDetails = () => {
                                   </div>
                                 </div>
 
-                                {enrollment && hasAccess && (
+                                {enrollment && hasAccess && !isAdmin && (
                                   <button
                                     onClick={() => handleLectureComplete(sectionIndex, lectureIndex)}
                                     className={`ml-4 p-2 rounded-lg transition-colors ${
@@ -528,6 +554,18 @@ const CourseDetails = () => {
                   {course.category}
                 </span>
               </div>
+              {isAdmin && (
+                <>
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status</span>
+                      <span className={`font-semibold ${course.isApproved ? 'text-green-600' : 'text-amber-600'}`}>
+                        {course.isApproved ? 'Approved' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
