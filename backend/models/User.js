@@ -39,15 +39,7 @@ const userSchema = new mongoose.Schema({
   },
   isApproved: {
     type: Boolean,
-    default: true
-  },
-  verificationCode: {
-    type: String,
-    select: false
-  },
-  verificationCodeExpire: {
-    type: Date,
-    select: false
+    default: true // Auto-approve students, teachers need admin approval
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date
@@ -67,14 +59,6 @@ userSchema.pre('save', async function(next) {
 // Match password
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
-};
-
-// Generate verification code
-userSchema.methods.generateVerificationCode = function() {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  this.verificationCode = code;
-  this.verificationCodeExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-  return code;
 };
 
 const User = mongoose.model('User', userSchema);
