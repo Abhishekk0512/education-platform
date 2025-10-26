@@ -17,8 +17,9 @@ const enrollmentSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
-  completedLessons: [{
-    type: Number // Lesson order numbers
+  completedLectures: [{
+    sectionIndex: Number,
+    lectureIndex: Number
   }],
   enrolledAt: {
     type: Date,
@@ -28,6 +29,10 @@ const enrollmentSchema = new mongoose.Schema({
   certificateIssued: {
     type: Boolean,
     default: false
+  },
+  lastAccessedLecture: {
+    sectionIndex: Number,
+    lectureIndex: Number
   }
 }, {
   timestamps: true

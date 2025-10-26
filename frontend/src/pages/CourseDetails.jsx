@@ -11,7 +11,9 @@ import {
   FileText,
   CheckCircle,
   Download,
-  ExternalLink
+  ChevronDown,
+  ChevronUp,
+  Lock
 } from 'lucide-react';
 
 const CourseDetails = () => {
@@ -23,7 +25,8 @@ const CourseDetails = () => {
   const [enrollment, setEnrollment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
-  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [selectedLecture, setSelectedLecture] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +42,8 @@ const CourseDetails = () => {
     try {
       const response = await courseAPI.getCourse(id);
       setCourse(response.data);
+      // Expand first section by default
+      setExpandedSections({ 0: true });
     } catch (error) {
       console.error('Error fetching course:', error);
     } finally {
@@ -80,20 +85,43 @@ const CourseDetails = () => {
     }
   };
 
-  const handleLessonComplete = async (lessonOrder) => {
+  const toggleSection = (sectionIndex) => {
+    setExpandedSections({
+      ...expandedSections,
+      [sectionIndex]: !expandedSections[sectionIndex]
+    });
+  };
+
+  const isLectureCompleted = (sectionIndex, lectureIndex) => {
+    if (!enrollment) return false;
+    return enrollment.completedLectures.some(
+      cl => cl.sectionIndex === sectionIndex && cl.lectureIndex === lectureIndex
+    );
+  };
+
+  const handleLectureComplete = async (sectionIndex, lectureIndex) => {
     if (!enrollment) return;
 
     try {
-      const completedLessons = enrollment.completedLessons.includes(lessonOrder)
-        ? enrollment.completedLessons
-        : [...enrollment.completedLessons, lessonOrder];
+      const isCompleted = isLectureCompleted(sectionIndex, lectureIndex);
+      let completedLectures;
 
-      const progress = Math.round(
-        (completedLessons.length / course.lessons.length) * 100
-      );
+      if (isCompleted) {
+        completedLectures = enrollment.completedLectures.filter(
+          cl => !(cl.sectionIndex === sectionIndex && cl.lectureIndex === lectureIndex)
+        );
+      } else {
+        completedLectures = [
+          ...enrollment.completedLectures,
+          { sectionIndex, lectureIndex }
+        ];
+      }
+
+      const totalLectures = course.sections.reduce((total, s) => total + s.lectures.length, 0);
+      const progress = Math.round((completedLectures.length / totalLectures) * 100);
 
       await enrollmentAPI.updateProgress(enrollment._id, {
-        completedLessons,
+        completedLectures,
         progress,
       });
 
@@ -101,6 +129,10 @@ const CourseDetails = () => {
     } catch (error) {
       console.error('Error updating progress:', error);
     }
+  };
+
+  const canAccessLecture = (lecture) => {
+    return enrollment || lecture.isPreview;
   };
 
   if (loading) {
@@ -123,6 +155,8 @@ const CourseDetails = () => {
       </div>
     );
   }
+
+  const totalLectures = course.sections?.reduce((total, s) => total + s.lectures.length, 0) || 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -155,7 +189,7 @@ const CourseDetails = () => {
               </div>
               <div className="flex items-center space-x-2 text-gray-600">
                 <BookOpen className="h-5 w-5" />
-                <span>{course.lessons?.length || 0} lessons</span>
+                <span>{totalLectures} lectures</span>
               </div>
             </div>
 
@@ -243,140 +277,182 @@ const CourseDetails = () => {
         </div>
       </div>
 
-      {/* Course Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Syllabus */}
-          <div className="card">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Syllabus</h2>
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-              {course.syllabus}
+      {/* Video Player Modal */}
+      {selectedLecture && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">
+                {selectedLecture.title}
+              </h3>
+              <button
+                onClick={() => setSelectedLecture(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <div className="p-4">
+              {selectedLecture.videoUrl && (
+                <video
+                  controls
+                  className="w-full rounded-lg mb-4"
+                  src={selectedLecture.videoUrl}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
+              {selectedLecture.description && (
+                <p className="text-gray-600 mb-4">{selectedLecture.description}</p>
+              )}
+              {selectedLecture.content && (
+                <div className="prose prose-sm max-w-none mb-4">
+                  <h4 className="font-semibold text-gray-900">About this lecture:</h4>
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedLecture.content}</p>
+                </div>
+              )}
+              {selectedLecture.pdfUrls && selectedLecture.pdfUrls.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Course Materials:</h4>
+                  <div className="space-y-2">
+                    {selectedLecture.pdfUrls.map((pdf, index) => (
+                      <a
+                        key={index}
+                        href={pdf.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200"
+                      >
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        <span className="flex-1 text-sm font-medium text-gray-900">{pdf.title}</span>
+                        <Download className="h-4 w-4 text-gray-600" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Video Player Modal */}
-          {selectedLesson && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="p-4 border-b flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    Lesson {selectedLesson.order}: {selectedLesson.title}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedLesson(null)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <span className="text-2xl">&times;</span>
-                  </button>
-                </div>
-                <div className="p-4">
-                  {selectedLesson.videoUrl && (
-                    <video
-                      controls
-                      className="w-full rounded-lg mb-4"
-                      src={selectedLesson.videoUrl}
+      {/* Course Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="card">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Course Content
+            </h2>
+            <div className="space-y-4">
+              {course.sections && course.sections.length > 0 ? (
+                course.sections.map((section, sectionIndex) => (
+                  <div key={sectionIndex} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => toggleSection(sectionIndex)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
-                      Your browser does not support the video tag.
-                    </video>
-                  )}
-                  <p className="text-gray-700 mb-4">{selectedLesson.content}</p>
-                  {selectedLesson.pdfUrl && (
-                    <a
-                      href={selectedLesson.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary inline-flex items-center space-x-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>Download PDF Materials</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Lessons */}
-          {enrollment && course.lessons && course.lessons.length > 0 && (
-            <div className="card">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Course Lessons
-              </h2>
-              <div className="space-y-3">
-                {course.lessons
-                  .sort((a, b) => a.order - b.order)
-                  .map((lesson) => (
-                    <div
-                      key={lesson.order}
-                      className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                              {lesson.order}
-                            </span>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {lesson.title}
-                            </h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">
-                            {lesson.content}
-                          </p>
-                          <div className="flex items-center space-x-4 flex-wrap gap-2">
-                            {lesson.videoUrl && (
-                              <button
-                                onClick={() => setSelectedLesson(lesson)}
-                                className="flex items-center space-x-1 text-sm text-primary hover:underline"
-                              >
-                                <PlayCircle className="h-4 w-4" />
-                                <span>Watch Video</span>
-                              </button>
-                            )}
-                            {lesson.pdfUrl && (
-                              <a
-                                href={lesson.pdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-1 text-sm text-primary hover:underline"
-                              >
-                                <FileText className="h-4 w-4" />
-                                <span>View PDF</span>
-                              </a>
-                            )}
-                            {lesson.pdfUrl && (
-                              <a
-                                href={lesson.pdfUrl}
-                                download
-                                className="flex items-center space-x-1 text-sm text-green-600 hover:underline"
-                              >
-                                <Download className="h-4 w-4" />
-                                <span>Download PDF</span>
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleLessonComplete(lesson.order)}
-                          className={`ml-4 p-2 rounded-lg transition-colors ${
-                            enrollment.completedLessons.includes(lesson.order)
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                          }`}
-                          title={
-                            enrollment.completedLessons.includes(lesson.order)
-                              ? 'Completed'
-                              : 'Mark as complete'
-                          }
-                        >
-                          <CheckCircle className="h-6 w-6" />
-                        </button>
+                      <div className="flex items-center space-x-3">
+                        {expandedSections[sectionIndex] ? (
+                          <ChevronUp className="h-5 w-5 text-gray-600" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-600" />
+                        )}
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {section.title}
+                        </h3>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                      <span className="text-sm text-gray-600">
+                        {section.lectures.length} lecture{section.lectures.length !== 1 ? 's' : ''}
+                      </span>
+                    </button>
+
+                    {expandedSections[sectionIndex] && (
+                      <div className="bg-white divide-y divide-gray-200">
+                        {section.lectures.map((lecture, lectureIndex) => {
+                          const isCompleted = isLectureCompleted(sectionIndex, lectureIndex);
+                          const hasAccess = canAccessLecture(lecture);
+
+                          return (
+                            <div
+                              key={lectureIndex}
+                              className="p-4 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    {hasAccess ? (
+                                      <button
+                                        onClick={() => setSelectedLecture(lecture)}
+                                        className="flex items-center space-x-2 text-primary hover:underline"
+                                      >
+                                        <PlayCircle className="h-5 w-5" />
+                                        <span className="font-medium">{lecture.title}</span>
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-center space-x-2 text-gray-500">
+                                        <Lock className="h-5 w-5" />
+                                        <span className="font-medium">{lecture.title}</span>
+                                      </div>
+                                    )}
+                                    {lecture.isPreview && (
+                                      <span className="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded">
+                                        Preview
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {lecture.description && (
+                                    <p className="text-sm text-gray-600 mb-2">{lecture.description}</p>
+                                  )}
+                                  
+                                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                    {lecture.duration && (
+                                      <span className="flex items-center space-x-1">
+                                        <Clock className="h-4 w-4" />
+                                        <span>{lecture.duration}</span>
+                                      </span>
+                                    )}
+                                    {lecture.videoUrl && hasAccess && (
+                                      <span className="flex items-center space-x-1">
+                                        <PlayCircle className="h-4 w-4" />
+                                        <span>Video</span>
+                                      </span>
+                                    )}
+                                    {lecture.pdfUrls && lecture.pdfUrls.length > 0 && hasAccess && (
+                                      <span className="flex items-center space-x-1">
+                                        <FileText className="h-4 w-4" />
+                                        <span>{lecture.pdfUrls.length} PDF{lecture.pdfUrls.length !== 1 ? 's' : ''}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {enrollment && hasAccess && (
+                                  <button
+                                    onClick={() => handleLectureComplete(sectionIndex, lectureIndex)}
+                                    className={`ml-4 p-2 rounded-lg transition-colors ${
+                                      isCompleted
+                                        ? 'bg-green-100 text-green-600'
+                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                    }`}
+                                    title={isCompleted ? 'Completed' : 'Mark as complete'}
+                                  >
+                                    <CheckCircle className="h-6 w-6" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-600 text-center py-8">No content available yet.</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -405,9 +481,15 @@ const CourseDetails = () => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Lessons</span>
+                <span className="text-gray-600">Sections</span>
                 <span className="font-semibold text-gray-900">
-                  {course.lessons?.length || 0}
+                  {course.sections?.length || 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Lectures</span>
+                <span className="font-semibold text-gray-900">
+                  {totalLectures}
                 </span>
               </div>
               <div className="flex justify-between">
