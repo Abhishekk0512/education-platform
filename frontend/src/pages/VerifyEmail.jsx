@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
 
 const VerifyEmail = () => {
   const [code, setCode] = useState('');
@@ -11,6 +13,7 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const userId = state?.userId;
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,14 +23,14 @@ const VerifyEmail = () => {
 
     try {
       const res = await authAPI.verifyEmail({ userId, code });
-      login(response.data); // store token & user
-if (response.data.user.role === 'student') {
+      login(res.data); // store token & user
+if (res.data.user.role === 'student') {
   navigate('/student/dashboard');
-} else if (response.data.user.role === 'teacher') {
+} else if (res.data.user.role === 'teacher') {
   navigate('/teacher/dashboard');
 }
       setMessage(res.data.message);
-      setTimeout(() => navigate('/login'), 2000);
+    //   setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed');
     } finally {
