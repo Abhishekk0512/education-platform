@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, Send, Trash2, Edit2, Pin, MoreVertical, X, Check } from 'lucide-react';
+import { discussionAPI } from '../services/api';
 
 const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
   const [discussions, setDiscussions] = useState([]);
@@ -12,16 +13,18 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
   const [showMenu, setShowMenu] = useState(null);
 
   useEffect(() => {
-    fetchDiscussions();
+    if (courseId) {
+      fetchDiscussions();
+    }
   }, [courseId]);
 
   const fetchDiscussions = async () => {
     try {
-      const response = await fetch(`/api/discussions/course/${courseId}`);
-      const data = await response.json();
-      setDiscussions(data);
+      const response = await discussionAPI.getCourseDiscussions(courseId);
+      setDiscussions(response.data || []);
     } catch (error) {
       console.error('Error fetching discussions:', error);
+      setDiscussions([]);
     }
   };
 
@@ -29,16 +32,16 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
     if (!newComment.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/discussions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId, content: newComment, parentCommentId: null })
+      const response = await discussionAPI.createComment({
+        courseId,
+        content: newComment,
+        parentCommentId: null
       });
-      const data = await response.json();
-      setDiscussions([{ ...data, replies: [] }, ...discussions]);
+      setDiscussions([{ ...response.data, replies: [] }, ...discussions]);
       setNewComment('');
     } catch (error) {
       console.error('Error posting comment:', error);
+      alert('Failed to post comment. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -48,19 +51,19 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
     if (!replyContent.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/discussions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId, content: replyContent, parentCommentId: commentId })
+      const response = await discussionAPI.createComment({
+        courseId,
+        content: replyContent,
+        parentCommentId: commentId
       });
-      const data = await response.json();
       setDiscussions(discussions.map(disc => 
-        disc._id === commentId ? { ...disc, replies: [...(disc.replies || []), data] } : disc
+        disc._id === commentId ? { ...disc, replies: [...(disc.replies || []), response.data] } : disc
       ));
       setReplyingTo(null);
       setReplyContent('');
     } catch (error) {
       console.error('Error posting reply:', error);
+      alert('Failed to post reply. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,16 +73,11 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
     if (!editContent.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/discussions/${commentId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent })
-      });
-      const data = await response.json();
+      const response = await discussionAPI.updateComment(commentId, { content: editContent });
       setDiscussions(discussions.map(disc => {
-        if (disc._id === commentId) return data;
+        if (disc._id === commentId) return { ...response.data, replies: disc.replies };
         if (disc.replies) {
-          return { ...disc, replies: disc.replies.map(reply => reply._id === commentId ? data : reply) };
+          return { ...disc, replies: disc.replies.map(reply => reply._id === commentId ? response.data : reply) };
         }
         return disc;
       }));
@@ -87,16 +85,17 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
       setEditContent('');
     } catch (error) {
       console.error('Error editing comment:', error);
+      alert('Failed to edit comment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteComment = async (commentId, isReply = false, parentId = null) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
     setLoading(true);
     try {
-      await fetch(`/api/discussions/${commentId}`, { method: 'DELETE' });
+      await discussionAPI.deleteComment(commentId);
       if (isReply && parentId) {
         setDiscussions(discussions.map(disc => 
           disc._id === parentId ? { ...disc, replies: disc.replies.filter(r => r._id !== commentId) } : disc
@@ -106,6 +105,7 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
+      alert('Failed to delete comment. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -113,11 +113,17 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
 
   const handlePinComment = async (commentId) => {
     try {
-      const response = await fetch(`/api/discussions/${commentId}/pin`, { method: 'PUT' });
-      const data = await response.json();
-      setDiscussions(discussions.map(disc => disc._id === commentId ? data : disc));
+      const response = await discussionAPI.pinComment(commentId);
+      setDiscussions(discussions.map(disc => 
+        disc._id === commentId ? { ...response.data, replies: disc.replies } : disc
+      ).sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }));
     } catch (error) {
       console.error('Error pinning comment:', error);
+      alert('Failed to pin comment. Please try again.');
     }
   };
 
@@ -192,7 +198,7 @@ const DiscussionSection = ({ courseId, user, isAdmin, isTeacher }) => {
                     className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" rows="3" />
                   <div className="flex space-x-2 mt-2">
                     <button onClick={() => handleEditComment(comment._id)} disabled={loading}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center space-x-1">
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center space-x-1 disabled:opacity-50">
                       <Check className="h-4 w-4" /><span>Save</span>
                     </button>
                     <button onClick={() => { setEditingComment(null); setEditContent(''); }}
