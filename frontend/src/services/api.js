@@ -55,6 +55,7 @@ export const adminAPI = {
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getPendingCourses: () => api.get('/admin/courses/pending'),
+  getAllCourses: () => api.get('/admin/courses/all'),
   approveCourse: (id, isApproved) => api.put(`/admin/courses/${id}/approve`, { isApproved }),
   getAnalytics: () => api.get('/admin/analytics')
 };

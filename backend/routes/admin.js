@@ -58,6 +58,21 @@ router.delete('/users/:id', protect, authorizeRoles('admin'), async (req, res) =
   }
 });
 
+// @route   GET /api/admin/courses/all
+// @desc    Get all courses (approved and pending)
+// @access  Private/Admin
+router.get('/courses/all', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const courses = await Course.find({})
+      .populate('instructor', 'name email photo bio')
+      .sort({ createdAt: -1 });
+
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   GET /api/admin/courses/pending
 // @desc    Get pending courses for approval
 // @access  Private/Admin
@@ -72,6 +87,8 @@ router.get('/courses/pending', protect, authorizeRoles('admin'), async (req, res
     res.status(500).json({ message: error.message });
   }
 });
+
+
 
 // @route   PUT /api/admin/courses/:id/approve
 // @desc    Approve/reject course
@@ -107,7 +124,7 @@ router.get('/analytics', protect, authorizeRoles('admin'), async (req, res) => {
     const pendingTeachers = await User.countDocuments({ role: 'teacher', isApproved: false });
 
     res.json({
-      totalUsers,
+       totalUsers,
       totalStudents,
       totalTeachers,
       totalCourses,
