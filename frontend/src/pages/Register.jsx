@@ -32,11 +32,13 @@ const Register = () => {
       setError('Passwords do not match');
       return;
     }
+    console.log(formData)
 
     setLoading(true);
 
     try {
       const { confirmPassword, ...registrationData } = formData;
+      console.log(formData)
       const response = await authAPI.register(registrationData);
       navigate('/verify-email', { state: { userId: response.data.userId } });
       
