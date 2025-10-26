@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CourseDetails from './pages/CourseDetails';
 import CreateCourse from './pages/CreateCourse';
 import Profile from './pages/Profile';
+import HomePage from './pages/HomePage';
 
 function App() {
   const { loading } = useAuth();
@@ -32,7 +33,14 @@ function App() {
         <Navbar />
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                  <HomePage/>
+              }
+            />
+            <Route path="/courses" element={<Home/>} />
+            {/* <Route path="/" element={<Home />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/courses/:id" element={<CourseDetails />} />
