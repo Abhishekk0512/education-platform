@@ -37,16 +37,15 @@ const Register = () => {
 
     try {
       const { confirmPassword, ...registrationData } = formData;
-      console.log(formData)
       const response = await authAPI.register(registrationData);
-      navigate('/verify-email', { state: { userId: response.data.userId } });
+      login(response.data);
       
-      // // Redirect based on role
-      // if (response.data.role === 'student') {
-      //   navigate('/student/dashboard');
-      // } else if (response.data.role === 'teacher') {
-      //   navigate('/teacher/dashboard');
-      // }
+      // Redirect based on role
+      if (response.data.role === 'student') {
+        navigate('/student/dashboard');
+      } else if (response.data.role === 'teacher') {
+        navigate('/teacher/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {

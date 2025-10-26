@@ -25,13 +25,6 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'teacher', 'admin'],
     default: 'student'
   },
-  verificationCode: {
-  type: String
-},
-isVerified: {
-  type: Boolean,
-  default: false
-},
   bio: {
     type: String,
     maxlength: 500
