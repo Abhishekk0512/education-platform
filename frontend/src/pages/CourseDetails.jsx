@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { courseAPI, enrollmentAPI } from '../services/api';
+import DiscussionSection from '../components/DiscussionSection';
 import {
   Users,
   Clock,
@@ -29,8 +30,9 @@ const CourseDetails = () => {
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [expandedSections, setExpandedSections] = useState({});
 
-  // Check if user is admin
+  // Check if user is admin or teacher
   const isAdmin = user?.role === 'admin';
+  const isTeacher = user?.role === 'teacher';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -390,7 +392,7 @@ const CourseDetails = () => {
       {/* Course Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="card">
+          <div className="card mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Course Content
             </h2>
@@ -509,6 +511,14 @@ const CourseDetails = () => {
               )}
             </div>
           </div>
+
+          {/* Discussion Section */}
+          <DiscussionSection 
+            courseId={id}
+            user={user}
+            isAdmin={isAdmin}
+            isTeacher={isTeacher}
+          />
         </div>
 
         {/* Sidebar */}

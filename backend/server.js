@@ -8,7 +8,9 @@ import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courses.js';
 import enrollmentRoutes from './routes/enrollments.js';
 import adminRoutes from './routes/admin.js';
-import uploadRoutes from './routes/upload.js'; // ADD THIS LINE
+import uploadRoutes from './routes/upload.js';
+import discussionRoutes from './routes/discussions.js';
+
 
 dotenv.config();
 
@@ -32,7 +34,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes); // ADD THIS LINE
+app.use('/api/upload', uploadRoutes);
+app.use('/api/discussions', discussionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

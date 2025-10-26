@@ -60,6 +60,16 @@ export const adminAPI = {
   getAnalytics: () => api.get('/admin/analytics')
 };
 
+// Discussion API
+export const discussionAPI = {
+  getCourseDiscussions: (courseId) => api.get(`/discussions/course/${courseId}`),
+  createComment: (data) => api.post('/discussions', data),
+  updateComment: (id, data) => api.put(`/discussions/${id}`, data),
+  deleteComment: (id) => api.delete(`/discussions/${id}`),
+  pinComment: (id) => api.put(`/discussions/${id}/pin`),
+  getCommentReplies: (id) => api.get(`/discussions/${id}/replies`)
+};
+
 // Quiz API
 export const quizAPI = {
   createQuiz: (data) => api.post('/quiz', data),
