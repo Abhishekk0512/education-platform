@@ -182,7 +182,6 @@
 
 // export default Register;
 
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
@@ -205,14 +204,22 @@ const Register = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -220,7 +227,12 @@ const Register = () => {
 
     try {
       const { confirmPassword, ...registrationData } = formData;
+      
+      console.log('Sending registration request...', { email: registrationData.email });
+      
       const response = await authAPI.register(registrationData);
+      
+      console.log('Registration response:', response.data);
       
       // Redirect to verification page with userId and email
       navigate('/verify-email', { 
@@ -228,10 +240,23 @@ const Register = () => {
           userId: response.data.userId,
           email: response.data.email,
           role: formData.role
-        } 
+        },
+        replace: true
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      
+      // Handle different error types
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data?.message || 'Registration failed. Please try again.');
+      } else if (err.request) {
+        // Request made but no response
+        setError('No response from server. Please check your connection and try again.');
+      } else {
+        // Something else happened
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -246,9 +271,9 @@ const Register = () => {
           </h2>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-800">
-              <AlertCircle className="h-5 w-5" />
-              <span>{error}</span>
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-2 text-red-800">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <span className="text-sm">{error}</span>
             </div>
           )}
 
@@ -266,6 +291,7 @@ const Register = () => {
                 required
                 className="input-field"
                 placeholder="John Doe"
+                disabled={loading}
               />
             </div>
 
@@ -282,6 +308,7 @@ const Register = () => {
                 required
                 className="input-field"
                 placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
 
@@ -299,6 +326,7 @@ const Register = () => {
                 minLength={6}
                 className="input-field"
                 placeholder="••••••••"
+                disabled={loading}
               />
               <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
             </div>
@@ -316,6 +344,7 @@ const Register = () => {
                 required
                 className="input-field"
                 placeholder="••••••••"
+                disabled={loading}
               />
             </div>
 
@@ -329,6 +358,7 @@ const Register = () => {
                 value={formData.role}
                 onChange={handleChange}
                 className="input-field"
+                disabled={loading}
               >
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
@@ -346,7 +376,17 @@ const Register = () => {
               disabled={loading}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating account...
+                </span>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </form>
 
