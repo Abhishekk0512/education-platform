@@ -143,7 +143,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+
+
 
 // Body parsing middleware - AFTER CORS
 app.use(express.json({ limit: '50mb' }));
